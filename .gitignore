@@ -1,0 +1,4 @@
+local-app/data/
+local-app/.venv/
+__pycache__/
+.DS_Store

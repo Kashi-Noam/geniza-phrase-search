@@ -33,17 +33,21 @@ Each fragment has a genre, taken from a unified genre field that combines FGP, P
 | `?` | one letter you can't read | `שהדות? ד?ות באנפ?א` |
 | `*` | any letters | `ושלום*` |
 | `_` | a whole word you can't read | `ברוך _ אלהינו` |
+| last word | can be the beginning of a word; end the query with a space to ask for the whole word | `נקול נ` → `נקול נחן…` |
 
 "Look-alike letters" also matches ד/ר/ך, ה/ח/ת, ו/י/ן/ז, ב/כ, ס/ם, ג/נ, ע/צ, מ/ט.
 
 ## How it works
 
-The site is static. The browser loads compressed data files from `data/` only as needed:
+The site is static. The browser loads compressed data files from `data/` only as needed and does the matching itself.
 
-- `p/`: phrases, split by their first letters;
-- `w/`: a word index;
-- `l/`: the lines themselves.
+The full technical explanation is in [docs/TECHNICAL.md](docs/TECHNICAL.md): the pipeline, the cleaning, the counting, the data formats, the search algorithm and how to rebuild. How each transcription convention was cleaned is in [docs/transcription_conventions.md](docs/transcription_conventions.md).
 
-The files are built from the Haifa server pipeline (`corpus.py`, `phrases.py`, `export_static.py`).
+| Folder | What it is |
+|---|---|
+| `index.html`, `data/` | The online site (GitHub Pages) |
+| `pipeline/` | The scripts that build the data on the Haifa server: `extract_fgp.py` → `corpus.py` → `phrases.py` → `export_static.py` |
+| `local-app/` | A version that runs on your own computer: a Python server over the DuckDB database, with exact counts |
+| `docs/` | Technical documentation |
 
 The transcriptions belong to their editors and projects. Please credit the Friedberg Genizah Project and the Princeton Geniza Project, and do not use the data commercially.

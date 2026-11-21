@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geniza Phrase Search</title>
+<style>
+:root{--bg:#f6f5f2;--surface:#fff;--ink:#1d1d1f;--ink2:#55555c;--muted:#8a8a92;--line:#e4e2dc;--accent:#2f5bd3;--accent-soft:#e7edfc;--mark:#fff1b8;--heat:47,91,211}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141416;--surface:#1d1d20;--ink:#ececef;--ink2:#b4b4bb;--muted:#85858d;--line:#2e2e33;--accent:#7c9cff;--accent-soft:#232c45;--mark:#5a4a10;--heat:124,156,255}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.heb{font-family:"SBL Hebrew","Ezra SIL","Taamey Frank CLM","Times New Roman",serif;font-size:19px;direction:rtl;unicode-bidi:plaintext}
+header{padding:20px 24px 8px;max-width:1400px;margin:auto}
+h1{font-size:20px;margin:0 0 2px}
+.sub{color:var(--ink2);font-size:13px;margin:0}
+main{max-width:1400px;margin:auto;padding:8px 24px 40px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.searchrow{display:flex;gap:10px;align-items:stretch}
+#q{flex:1;min-width:0;font-size:24px;padding:10px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);outline:none}
+#q:focus{border-color:var(--accent)}
+.ins{display:flex;gap:6px}
+.ins button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:0 10px;cursor:pointer}
+.ins button:hover{border-color:var(--accent)}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin-top:12px;font-size:13px;color:var(--ink2)}
+.ctl label{display:flex;align-items:center;gap:6px}
+select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;border:0;background:var(--surface);color:var(--ink2);padding:4px 10px;cursor:pointer}
+.seg button.on{background:var(--accent);color:#fff}
+.help{font-size:12.5px;color:var(--muted);margin-top:10px}
+a{color:var(--accent)}
+.help code{background:var(--accent-soft);color:var(--ink);padding:0 5px;border-radius:4px;font-size:13px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px;margin-top:16px}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+h2{font-size:15px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+h2 .muted{font-weight:400}
+.muted{color:var(--muted);font-size:12.5px}
+table{width:100%;border-collapse:collapse}
+th{font-size:12px;color:var(--muted);font-weight:500;text-align:left;padding:4px 6px;border-bottom:1px solid var(--line)}
+td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr.ph{cursor:pointer}
+tr.ph td.heb{width:100%;font-size:18px}
+tr.ph:hover td{background:var(--accent-soft)}
+tr.ph.sel td{background:var(--accent-soft)}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px}
+.bar{height:6px;border-radius:3px;background:var(--accent);opacity:.75;min-width:2px}
+.next{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:6px;padding:1px 7px;cursor:pointer;white-space:nowrap}
+.next:hover{border-color:var(--accent);color:var(--accent)}
+.ex{border-bottom:1px solid var(--line);padding:10px 0}
+.ex:last-child{border-bottom:0}
+.exmeta{font-size:12.5px;color:var(--ink2);display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
+.exmeta a{color:var(--accent);text-decoration:none}
+.exmeta a:hover{text-decoration:underline}
+.pill{font-size:11.5px;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--ink)}
+mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 2px}
+.brk{color:var(--muted);padding:0 4px}
+.raw{font-size:16px;color:var(--ink2);margin-top:4px;display:none}
+.ex.showraw .raw{display:block}
+.rawbtn{font:inherit;font-size:12px;border:0;background:none;color:var(--accent);cursor:pointer;padding:0}
+.heat td{text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums}
+.heat td:first-child{text-align:left}
+.empty{color:var(--muted);padding:20px 0;text-align:center}
+.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:5px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+#crumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+#crumbs button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:999px;padding:2px 10px;cursor:pointer;direction:rtl}
+.err{color:#c0392b;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+ <h1>Geniza Phrase Search</h1>
+ <p class="sub" id="stats">Common phrases in human transcriptions of Geniza fragments (Friedberg Genizah Project and Princeton Geniza Project).</p>
+</header>
+<main>
+<div class="card">
+ <div class="searchrow">
+  <input id="q" class="heb" placeholder="הקלידו מילה או תחילת ביטוי" autocomplete="off" spellcheck="false" aria-label="Pattern">
+  <div class="ins" aria-label="Insert wildcard">
+   <button data-i="?" title="One letter you cannot read">? letter</button>
+   <button data-i="*" title="Any number of letters">* letters</button>
+   <button data-i=" _ " title="A whole word you cannot read">_ word</button>
+  </div>
+ </div>
+ <div class="ctl">
+  <span class="seg" id="mode"><button data-v="start" class="on">Starts with</button><button data-v="contains">Contains</button></span>
+  <label>Genre <select id="genre"><option value="">all genres</option></select></label>
+  <label>Place in text <select id="position"><option value="">anywhere</option><option value="start">start (first lines)</option><option value="middle">middle</option><option value="end">end (last lines)</option></select></label>
+  <label>Words <select id="nmin"></select> to <select id="nmax"></select></label>
+  <span class="seg" id="layer" title="Strict: only letters legible on the fragment. Full: including the editors' restorations and expanded abbreviations."><button data-v="strict" class="on">Legible text only</button><button data-v="full">With restorations</button></span>
+  <label title="Also match letters that look alike in Geniza scripts: ד/ר/ך, ה/ח/ת, ו/י/ן/ז, ב/כ, ס/ם, ג/נ, ע/צ, מ/ט"><input type="checkbox" id="alike"> look-alike letters</label>
+  <label title="The last word you type can be the beginning of a word: נקול נ finds נקול נחנא. End with a space to ask for the whole word."><input type="checkbox" id="partial" checked> complete the last word</label>
+ </div>
+ <div class="help"><code>?</code> one letter you can't read &nbsp;·&nbsp; <code>*</code> any letters &nbsp;·&nbsp; <code>_</code> a whole word &nbsp;·&nbsp; the last word can be partial (<a href="#" class="eg">נקול נ</a>); end with a space for the whole word &nbsp;·&nbsp; examples: <a href="#" class="eg">שהדות? ד?ות באנפ?א</a>, <a href="#" class="eg">ושלום*</a>, <a href="#" class="eg">ברוך _ אלהינו</a> &nbsp;·&nbsp; counts are fragments, not occurrences</div>
+ <div id="crumbs"></div>
+</div>
+
+<div class="grid">
+ <div class="card">
+  <h2>Phrases <span class="muted" id="rcount"></span></h2>
+  <div id="results"><p class="empty">Type a word or the start of a phrase.</p></div>
+ </div>
+ <div class="card" id="detail">
+  <h2>Where it appears</h2>
+  <p class="empty">Click a phrase to see where it appears and real lines that contain it.</p>
+ </div>
+</div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>Number(n).toLocaleString('en-US');
+const st={q:'',mode:'start',genre:'',position:'',nmin:2,nmax:7,layer:'strict',alike:false,partial:true,sel:null,crumbs:[]};
+for(let i=2;i<=7;i++){$('nmin').add(new Option(i,i));$('nmax').add(new Option(i,i))}
+$('nmax').value=7;
+
+async function api(path,params){const u=new URLSearchParams(params);const r=await fetch(path+'?'+u);const j=await r.json();if(j.error)throw new Error(j.error);return j}
+function filters(){return {genre:st.genre,position:st.position,layer:st.layer,alike:st.alike?'1':'',partial:st.partial&&!/\s$/.test(st.q)?'1':''}}
+const POSN={start:'start',middle:'middle',end:'end',unknown:'unknown'};
+
+fetch('/api/meta').then(r=>r.json()).then(m=>{
+ $('stats').textContent=`${fmt(m.phrases)} phrases of 2–7 words found in at least 3 fragments · ${fmt(m.fragments)} fragments · ${fmt(m.lines)} transcription lines (Friedberg Genizah Project and Princeton Geniza Project).`;
+ m.genres.forEach(g=>$('genre').add(new Option(g,g)));fromHash();});
+
+function seg(id,key){$(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{st[key]=b.dataset.v;$(id).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));go()})}
+seg('mode','mode');seg('layer','layer');
+$('genre').onchange=()=>{st.genre=$('genre').value;go()};$('position').onchange=()=>{st.position=$('position').value;go()};
+$('nmin').onchange=()=>{st.nmin=+$('nmin').value;if(st.nmax<st.nmin){st.nmax=st.nmin;$('nmax').value=st.nmax}go()};
+$('nmax').onchange=()=>{st.nmax=+$('nmax').value;if(st.nmin>st.nmax){st.nmin=st.nmax;$('nmin').value=st.nmin}go()};
+$('alike').onchange=()=>{st.alike=$('alike').checked;go()};$('partial').onchange=()=>{st.partial=$('partial').checked;go()};
+let t;$('q').oninput=()=>{clearTimeout(t);t=setTimeout(()=>{st.q=$('q').value.replace(/^\s+/,'');st.crumbs=[];go()},280)};
+document.querySelectorAll('.ins button').forEach(b=>b.onclick=()=>{const i=$('q'),s=i.selectionStart??i.value.length,e=i.selectionEnd??s;
+ i.value=i.value.slice(0,s)+b.dataset.i+i.value.slice(e);i.focus();i.setSelectionRange(s+b.dataset.i.length,s+b.dataset.i.length);i.oninput()});
+document.querySelectorAll('.eg').forEach(a=>a.onclick=e=>{e.preventDefault();$('q').value=a.textContent;st.q=a.textContent;st.crumbs=[];go()});
+
+function toHash(){const h=new URLSearchParams({q:st.q,mode:st.mode,genre:st.genre,position:st.position,n:st.nmin+'-'+st.nmax,layer:st.layer,alike:st.alike?'1':'',partial:st.partial?'1':'0',sel:st.sel||''});history.replaceState(null,'','#'+h);lastHash=location.hash}
+function fromHash(){const h=new URLSearchParams(location.hash.slice(1));if(!h.get('q'))return;
+ st.q=h.get('q');st.mode=h.get('mode')||'start';st.genre=h.get('genre')||'';st.position=h.get('position')||'';st.layer=h.get('layer')||'strict';st.alike=h.get('alike')==='1';st.partial=h.get('partial')!=='0';$('partial').checked=st.partial;
+ const n=(h.get('n')||'2-7').split('-');st.nmin=+n[0];st.nmax=+n[1];st.sel=h.get('sel')||null;
+ $('q').value=st.q;$('genre').value=st.genre;$('position').value=st.position;$('nmin').value=st.nmin;$('nmax').value=st.nmax;$('alike').checked=st.alike;
+ [['mode',st.mode],['layer',st.layer]].forEach(([id,v])=>$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===v)));
+ go(st.sel)}
+
+let seq=0;
+async function go(keepSel){toHash();const my=++seq;renderCrumbs();
+ if(!st.q.trim()){$('results').innerHTML='<p class="empty">Type a word or the start of a phrase.</p>';$('rcount').textContent='';return}
+ $('rcount').textContent='searching…';
+ try{const j=await api('/api/search',{q:st.q,mode:st.mode,n:st.nmin+'-'+st.nmax,limit:80,...filters()});if(my!==seq)return;
+  const R=j.rows;$('rcount').textContent=R.length?(R.length>=80?'top 80':R.length+' found'):'';
+  if(!R.length){$('results').innerHTML=`<p class="empty">No phrase found in at least 3 fragments${st.genre||st.position?' with these filters':''}.<br>Try “Contains”, fewer words, look-alike letters, or “With restorations”.</p>`;return}
+  const mx=Math.max(...R.map(r=>r.frags));const filt=st.genre||st.position;
+  $('results').innerHTML=`<table><tr><th>Phrase</th><th style="text-align:right">Fragments${filt?' (filtered)':''}</th><th style="min-width:50px"></th>${filt?'<th style="text-align:right">all</th>':''}<th></th></tr>`+
+   R.map((r,i)=>`<tr class="ph${r.phrase===keepSel?' sel':''}" data-i="${i}"><td class="heb">${esc(r.phrase)}</td><td class="n">${fmt(r.frags)}</td><td><div class="bar" style="width:${Math.max(3,100*r.frags/mx)}%"></div></td>${filt?`<td class="n muted">${fmt(r.frags_all)}</td>`:''}<td><button class="next" data-i="${i}" title="Show what follows this phrase">what follows ›</button></td></tr>`).join('')+'</table>';
+  $('results').querySelectorAll('tr.ph').forEach(tr=>tr.onclick=e=>{if(e.target.closest('.next'))return;$('results').querySelectorAll('tr.ph').forEach(x=>x.classList.remove('sel'));tr.classList.add('sel');detail(R[+tr.dataset.i].phrase)});
+  $('results').querySelectorAll('.next').forEach(b=>b.onclick=()=>{const p=R[+b.dataset.i].phrase;st.crumbs.push(st.q);st.q=p;st.mode='start';$('q').value=p;
+   $('mode').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.v==='start'));st.nmin=Math.min(7,p.split(' ').length+1);$('nmin').value=st.nmin;if(st.nmax<st.nmin){st.nmax=st.nmin;$('nmax').value=st.nmax}go();detail(p)});
+  if(keepSel&&R.some(r=>r.phrase===keepSel))detail(keepSel);
+ }catch(e){$('results').innerHTML=`<p class="err">${esc(e.message)}</p>`;$('rcount').textContent=''}}
+
+function renderCrumbs(){$('crumbs').innerHTML=st.crumbs.length?'<span class="muted" style="align-self:center">back to:</span>'+st.crumbs.map((c,i)=>`<button data-i="${i}" class="heb" style="font-size:15px">${esc(c)}</button>`).join(''):'';
+ $('crumbs').querySelectorAll('button').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;st.q=st.crumbs[i];st.crumbs=st.crumbs.slice(0,i);$('q').value=st.q;st.nmin=2;$('nmin').value=2;go()})}
+
+let exState={phrase:null,offset:0};
+async function detail(phrase){st.sel=phrase;toHash();exState={phrase,offset:0};
+ $('detail').innerHTML=`<h2><span class="heb" style="font-size:22px">${esc(phrase)}</span></h2><div id="where" class="muted">loading…</div><h2 style="margin-top:16px">Lines that contain it <span class="muted" id="extotal"></span></h2><div id="exs"></div><div style="margin-top:10px"><button class="btn" id="exmore" style="display:none">Show more lines</button></div>`;
+ try{const w=await api('/api/where',{phrase,layer:st.layer});renderWhere(w.rows)}catch(e){$('where').innerHTML=`<p class="err">${esc(e.message)}</p>`}
+ $('exmore').onclick=()=>moreEx();moreEx()}
+
+function renderWhere(rows){if(!rows.length){$('where').textContent='';return}
+ const P=['start','middle','end','unknown'],G=[...new Set(rows.map(r=>r.genre_domain))];const M={};let mx=0;
+ rows.forEach(r=>{(M[r.genre_domain]??={})[r.position]=r.frags;mx=Math.max(mx,r.frags)});
+ const tot=g=>P.reduce((s,p)=>s+(M[g][p]||0),0);G.sort((a,b)=>tot(b)-tot(a));
+ $('where').innerHTML=`<table class="heat"><tr><th>Genre</th>${P.map(p=>`<th style="text-align:right">${p==='unknown'?'line not known':p}</th>`).join('')}</tr>`+
+  G.map(g=>`<tr><td>${esc(g)}</td>${P.map(p=>{const v=M[g][p]||0;return `<td style="background:rgba(var(--heat),${v?(.08+.5*v/mx).toFixed(2):0})">${v?fmt(v):''}</td>`}).join('')}</tr>`).join('')+
+  '</table><p class="muted" style="margin:6px 0 0">Fragments per cell. A fragment where the phrase appears in several places counts in each.</p>'}
+
+function highlight(text,phrase){let h=esc(text).replace(/‖/g,'<span class="brk" title="break: gap or illegible">‖</span>');
+ const ws=phrase.split(' ').map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));const rx=new RegExp('(^|[\\s>])('+ws.join('\\s+')+')(?=$|[\\s<])','g');
+ return h.replace(rx,'$1<mark>$2</mark>')}
+
+async function moreEx(){const {phrase,offset}=exState;if(!phrase)return;
+ try{const j=await api('/api/examples',{phrase,k:12,offset,...filters(),alike:''});if(exState.phrase!==phrase)return;
+  $('extotal').textContent=j.total?`${fmt(j.total)} line${j.total===1?'':'s'}${st.genre||st.position?' with these filters':''}`:'';
+  if(!j.rows.length&&!offset){$('exs').innerHTML='<p class="empty">No lines with these filters.</p>';return}
+  $('exs').insertAdjacentHTML('beforeend',j.rows.map(r=>`<div class="ex"><div class="exmeta"><b>${esc(r.shelfmark||'(no shelfmark)')}</b>${r.library?`<span>${esc(r.library)}</span>`:''}
+   <span class="pill">${esc(r.genre_domain)}${r.genre&&r.genre!==r.genre_domain&&!/^\(/.test(r.genre)?' · '+esc(r.genre):''}</span>
+   <span>${r.position==='unknown'?'line position unknown':`line ${r.line_no} of ${r.n_lines} (${r.position})`}${r.block_kind&&!['main'].includes(r.block_kind)?' · '+esc(r.block_kind):''}</span>
+   ${r.link?`<a href="${esc(r.link)}" target="_blank" rel="noopener">${r.src==='pgp'&&!/nli/.test(r.link)?'Princeton':'NLI'} ↗</a>`:''}
+   <button class="rawbtn">transcription as written</button></div>
+   <div class="heb" style="margin-top:4px">${highlight(r.text,phrase)}</div><div class="raw heb">${esc(r.raw)}</div></div>`).join(''));
+  $('exs').querySelectorAll('.rawbtn').forEach(b=>b.onclick=()=>b.closest('.ex').classList.toggle('showraw'));
+  exState.offset+=j.rows.length;$('exmore').style.display=exState.offset<j.total?'':'none';
+ }catch(e){$('exs').innerHTML=`<p class="err">${esc(e.message)}</p>`}}
+let lastHash=location.hash;
+window.addEventListener('hashchange',()=>{if(location.hash!==lastHash){lastHash=location.hash;fromHash()}});
+</script>
+</body>
+</html>

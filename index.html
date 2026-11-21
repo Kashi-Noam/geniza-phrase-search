@@ -89,8 +89,9 @@ mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 2px}
   <label>Words <select id="nmin"></select> to <select id="nmax"></select></label>
   <span class="seg" id="layer" title="Strict: only letters legible on the fragment. Full: including the editors' restorations and expanded abbreviations."><button data-v="strict" class="on">Legible text only</button><button data-v="full">With restorations</button></span>
   <label title="Also match letters that look alike in Geniza scripts: ד/ר/ך, ה/ח/ת, ו/י/ן/ז, ב/כ, ס/ם, ג/נ, ע/צ, מ/ט"><input type="checkbox" id="alike"> look-alike letters</label>
+  <label title="The last word you type can be the beginning of a word: נקול נ finds נקול נחנא. End with a space to ask for the whole word."><input type="checkbox" id="partial" checked> complete the last word</label>
  </div>
- <div class="help"><code>?</code> one letter you can't read &nbsp;·&nbsp; <code>*</code> any letters &nbsp;·&nbsp; <code>_</code> a whole word &nbsp;·&nbsp; examples: <a href="#" class="eg">שהדות? ד?ות באנפ?א</a>, <a href="#" class="eg">ושלום*</a>, <a href="#" class="eg">ברוך _ אלהינו</a> &nbsp;·&nbsp; counts are fragments, not occurrences<br>The search runs in your browser. “Starts with” a known letter loads a small part of the data; “Contains” or a pattern starting with <code>?</code> loads all phrases (about 47 MB) the first time, then it is fast.</div>
+ <div class="help"><code>?</code> one letter you can't read &nbsp;·&nbsp; <code>*</code> any letters &nbsp;·&nbsp; <code>_</code> a whole word &nbsp;·&nbsp; the last word can be partial (<a href="#" class="eg">נקול נ</a>); end with a space for the whole word &nbsp;·&nbsp; examples: <a href="#" class="eg">שהדות? ד?ות באנפ?א</a>, <a href="#" class="eg">ושלום*</a>, <a href="#" class="eg">ברוך _ אלהינו</a> &nbsp;·&nbsp; counts are fragments, not occurrences<br>The search runs in your browser. “Starts with” a known letter loads a small part of the data; “Contains” or a pattern starting with <code>?</code> loads all phrases (about 47 MB) the first time, then it is fast.</div>
  <div id="crumbs"></div>
 </div>
 
@@ -110,7 +111,7 @@ mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 2px}
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=n=>Number(n).toLocaleString('en-US');
-const st={q:'',mode:'start',genre:'',position:'',nmin:2,nmax:7,layer:'strict',alike:false,sel:null,crumbs:[]};
+const st={q:'',mode:'start',genre:'',position:'',nmin:2,nmax:7,layer:'strict',alike:false,partial:true,sel:null,crumbs:[]};
 for(let i=2;i<=7;i++){$('nmin').add(new Option(i,i));$('nmax').add(new Option(i,i))}
 $('nmax').value=7;
 
@@ -125,7 +126,9 @@ const ENG=(()=>{
  async function meta(){if(!META)META=await (await fetch(D+'meta.json')).json();return META}
  const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  function wordRx(w,alike){if(w==='_')return '[^ ]+';let o='';for(const ch of w){if(ch==='?')o+=`[${HEB}]`;else if(ch==='*')o+='[^ ]*';else if(alike&&CLS[ch])o+=`[${CLS[ch]}]`;else o+=reEsc(ch)}return o}
- function toRx(p,mode,alike){const ws=p.split(/\s+/).filter(Boolean);return {rx:new RegExp((mode==='start'?'^':'(^| )')+ws.map(w=>wordRx(w,alike)).join(' ')+'( |$)'),ws}}
+ function toRx(p,mode,alike,partial){const ws=p.split(/\s+/).filter(Boolean);
+  const parts=ws.map((w,i)=>wordRx(w,alike)+(partial&&i===ws.length-1&&w!=='_'?'[^ ]*':''));   // partial: the last word may continue
+  return {rx:new RegExp((mode==='start'?'^':'(^| )')+parts.join(' ')+'( |$)'),ws}}
  function partsFor(p,mode,alike){const keys=Object.keys(META.parts);if(mode!=='start')return keys;
   let lit='';for(const ch of p){if('?*_'.includes(ch))break;lit+=ch}lit=lit.replace(/\s+/g,' ');if(!lit)return keys;
   if(alike){const first=CLS[lit[0]]||lit[0];return keys.filter(k=>first.includes(k[0]))}
@@ -138,9 +141,9 @@ const ENG=(()=>{
  function frags(b,tot,gi,pos){if(gi<0&&!pos)return tot;if(!b)return 0;const [cells,gen,po]=b.split('|');
   let key,list;if(gi>=0&&pos){key=gi+PL[pos];list=cells}else if(gi>=0){key=gi+'.';list=gen}else{key=PL[pos];list=po}
   for(const x of (list||'').split(','))if(x.startsWith(key)&&/^\d/.test(x.slice(key.length)))return +x.slice(key.length);return 0}
- async function search(q){await meta();const pat=(q.q||'').trim();if(!pat)return {rows:[]};const alike=q.alike==='1',mode=q.mode||'start',layer=q.layer||'strict';
+ async function search(q){await meta();const pat=(q.q||'').trim();if(!pat)return {rows:[]};const alike=q.alike==='1',partial=q.partial==='1',mode=q.mode||'start',layer=q.layer||'strict';
   const [lo,hi]=(q.n||'2-7').split('-').map(Number);const gi=q.genre?META.genres.indexOf(q.genre):-1,pos=q.position||'';
-  const {rx,ws}=toRx(pat,mode,alike);const files=await loadParts(partsFor(pat,mode,alike));status('searching…');
+  const {rx,ws}=toRx(pat,mode,alike,partial);const files=await loadParts(partsFor(pat,mode,alike));status('searching…');
   const out=[];for(const lines of files)for(const ln of lines){const t=ln.indexOf('\t');if(t<0)continue;const ph=ln.slice(0,t);if(!rx.test(ph))continue;
    const r=br(ln,layer);if(r.n<Math.max(lo,ws.length)||r.n>hi||!r.tot)continue;const fr=frags(r.b,r.tot,gi,pos);if(!fr)continue;out.push({phrase:ph,n:r.n,frags:fr,frags_all:r.tot})}
   out.sort((a,b)=>b.frags-a.frags||b.n-a.n);return {rows:out.slice(0,+(q.limit||60))}}
@@ -172,7 +175,7 @@ const ENG=(()=>{
 })();
 async function api(path,params){if(path==='/api/meta')return ENG.meta();if(path==='/api/search')return ENG.search(params);if(path==='/api/where')return ENG.where(params);if(path==='/api/examples')return ENG.examples(params);throw new Error('unknown '+path)}
 
-function filters(){return {genre:st.genre,position:st.position,layer:st.layer,alike:st.alike?'1':''}}
+function filters(){return {genre:st.genre,position:st.position,layer:st.layer,alike:st.alike?'1':'',partial:st.partial&&!/\s$/.test(st.q)?'1':''}}
 const POSN={start:'start',middle:'middle',end:'end',unknown:'unknown'};
 
 api('/api/meta').then(m=>{
@@ -184,15 +187,15 @@ seg('mode','mode');seg('layer','layer');
 $('genre').onchange=()=>{st.genre=$('genre').value;go()};$('position').onchange=()=>{st.position=$('position').value;go()};
 $('nmin').onchange=()=>{st.nmin=+$('nmin').value;if(st.nmax<st.nmin){st.nmax=st.nmin;$('nmax').value=st.nmax}go()};
 $('nmax').onchange=()=>{st.nmax=+$('nmax').value;if(st.nmin>st.nmax){st.nmin=st.nmax;$('nmin').value=st.nmin}go()};
-$('alike').onchange=()=>{st.alike=$('alike').checked;go()};
-let t;$('q').oninput=()=>{clearTimeout(t);t=setTimeout(()=>{st.q=$('q').value.trim();st.crumbs=[];go()},280)};
+$('alike').onchange=()=>{st.alike=$('alike').checked;go()};$('partial').onchange=()=>{st.partial=$('partial').checked;go()};
+let t;$('q').oninput=()=>{clearTimeout(t);t=setTimeout(()=>{st.q=$('q').value.replace(/^\s+/,'');st.crumbs=[];go()},280)};
 document.querySelectorAll('.ins button').forEach(b=>b.onclick=()=>{const i=$('q'),s=i.selectionStart??i.value.length,e=i.selectionEnd??s;
  i.value=i.value.slice(0,s)+b.dataset.i+i.value.slice(e);i.focus();i.setSelectionRange(s+b.dataset.i.length,s+b.dataset.i.length);i.oninput()});
 document.querySelectorAll('.eg').forEach(a=>a.onclick=e=>{e.preventDefault();$('q').value=a.textContent;st.q=a.textContent;st.crumbs=[];go()});
 
-function toHash(){const h=new URLSearchParams({q:st.q,mode:st.mode,genre:st.genre,position:st.position,n:st.nmin+'-'+st.nmax,layer:st.layer,alike:st.alike?'1':'',sel:st.sel||''});history.replaceState(null,'','#'+h);lastHash=location.hash}
+function toHash(){const h=new URLSearchParams({q:st.q,mode:st.mode,genre:st.genre,position:st.position,n:st.nmin+'-'+st.nmax,layer:st.layer,alike:st.alike?'1':'',partial:st.partial?'1':'0',sel:st.sel||''});history.replaceState(null,'','#'+h);lastHash=location.hash}
 function fromHash(){const h=new URLSearchParams(location.hash.slice(1));if(!h.get('q'))return;
- st.q=h.get('q');st.mode=h.get('mode')||'start';st.genre=h.get('genre')||'';st.position=h.get('position')||'';st.layer=h.get('layer')||'strict';st.alike=h.get('alike')==='1';
+ st.q=h.get('q');st.mode=h.get('mode')||'start';st.genre=h.get('genre')||'';st.position=h.get('position')||'';st.layer=h.get('layer')||'strict';st.alike=h.get('alike')==='1';st.partial=h.get('partial')!=='0';$('partial').checked=st.partial;
  const n=(h.get('n')||'2-7').split('-');st.nmin=+n[0];st.nmax=+n[1];st.sel=h.get('sel')||null;
  $('q').value=st.q;$('genre').value=st.genre;$('position').value=st.position;$('nmin').value=st.nmin;$('nmax').value=st.nmax;$('alike').checked=st.alike;
  [['mode',st.mode],['layer',st.layer]].forEach(([id,v])=>$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===v)));
@@ -200,7 +203,7 @@ function fromHash(){const h=new URLSearchParams(location.hash.slice(1));if(!h.ge
 
 let seq=0;
 async function go(keepSel){toHash();const my=++seq;renderCrumbs();
- if(!st.q){$('results').innerHTML='<p class="empty">Type a word or the start of a phrase.</p>';$('rcount').textContent='';return}
+ if(!st.q.trim()){$('results').innerHTML='<p class="empty">Type a word or the start of a phrase.</p>';$('rcount').textContent='';return}
  $('rcount').textContent='searching…';
  try{const j=await api('/api/search',{q:st.q,mode:st.mode,n:st.nmin+'-'+st.nmax,limit:80,...filters()});if(my!==seq)return;
   const R=j.rows;$('rcount').textContent=R.length?(R.length>=80?'top 80':R.length+' found'):'';
