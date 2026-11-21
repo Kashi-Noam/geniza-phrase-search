@@ -186,8 +186,8 @@ async function moreEx(){const {phrase,offset}=exState;if(!phrase)return;
   $('exs').insertAdjacentHTML('beforeend',j.rows.map(r=>`<div class="ex"><div class="exmeta"><b>${esc(r.shelfmark||'(no shelfmark)')}</b>${r.library?`<span>${esc(r.library)}</span>`:''}
    <span class="pill">${esc(r.genre_domain)}${r.genre&&r.genre!==r.genre_domain&&!/^\(/.test(r.genre)?' · '+esc(r.genre):''}</span>
    <span>${r.position==='unknown'?'line position unknown':`line ${r.line_no} of ${r.n_lines} (${r.position})`}${r.block_kind&&!['main'].includes(r.block_kind)?' · '+esc(r.block_kind):''}</span>
+   ${r.pgp_link?`<a href="${esc(r.pgp_link)}" target="_blank" rel="noopener" title="${r.src==='pgp'?'the Princeton Geniza Project document this line comes from':'this fragment in the Princeton Geniza Project'}">${esc(r.pgp_label)} ↗</a>`:''}
    ${r.link?`<a href="${esc(r.link)}" target="_blank" rel="noopener">NLI ↗</a>`:''}
-   ${r.pgp_link?`<a href="${esc(r.pgp_link)}" target="_blank" rel="noopener" title="the Princeton Geniza Project document this line comes from">Princeton doc ${esc(r.doc)} ↗</a>`:''}
    <button class="rawbtn">transcription as written</button></div>
    <div class="heb" style="margin-top:4px">${highlight(r.text,phrase)}</div><div class="raw heb">${esc(r.raw)}</div></div>`).join(''));
   $('exs').querySelectorAll('.rawbtn').forEach(b=>b.onclick=()=>b.closest('.ex').classList.toggle('showraw'));

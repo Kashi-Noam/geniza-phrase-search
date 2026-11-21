@@ -158,8 +158,12 @@ const ENG=(()=>{
   const s=WC.get(name).get(w);if(!s)return new Int32Array(0);const p=s.split(',');const a=new Int32Array(p.length);let v=0;for(let i=0;i<p.length;i++){v+=parseInt(p[i],36);a[i]=v}return a}
  function inter(a,b){const o=[];let i=0,j=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){o.push(a[i]);i++;j++}else if(a[i]<b[j])i++;else j++}return Int32Array.from(o)}
  async function chunk(c){if(!LC.has(c))LC.set(c,JSON.parse(await gunz(D+'l/'+String(c).padStart(4,'0')+'.json.gz')));return LC.get(c)}
- let EX=null;
- async function examples(q){await meta();const ph=q.phrase,layer=q.layer||'strict',gi=q.genre?META.genres.indexOf(q.genre):-1,pos=q.position||'',k=+(q.k||12);
+ let EX=null,PGPL=null;
+ // Princeton link: a PGP line goes to its own document; any other line goes to the PGP document(s) of its shelfmark (data/pgp_links.json, pipeline/pgp_links.py)
+ function pgpLink(src,doc,sm){const P='https://geniza.princeton.edu/en/documents/';if(src==='pgp')return {pgp_link:`${P}${doc}/`,pgp_label:`Princeton doc ${doc}`};
+  const m=PGPL&&PGPL[sm];if(!m)return {pgp_link:'',pgp_label:''};const ids=m[1].split(',');
+  return ids.length===1?{pgp_link:`${P}${ids[0]}/`,pgp_label:`Princeton doc ${ids[0]}`}:{pgp_link:`${P}?q=${encodeURIComponent('shelfmark:"'+m[0]+'"')}`,pgp_label:`Princeton (${ids.length} docs)`}}
+ async function examples(q){await meta();if(!PGPL)PGPL=await fetch(D+'pgp_links.json').then(r=>r.ok?r.json():{}).catch(()=>({}));const ph=q.phrase,layer=q.layer||'strict',gi=q.genre?META.genres.indexOf(q.genre):-1,pos=q.position||'',k=+(q.k||12);
   const key=[ph,layer,gi,pos].join('\u0001');
   if(!EX||EX.key!==key||+q.offset===0){const ws=[...new Set(ph.split(' '))];const lists=await Promise.all(ws.map(postings));lists.sort((a,b)=>a.length-b.length);
    let c=lists[0]||new Int32Array(0);for(const l of lists.slice(1))c=inter(c,l);
@@ -170,7 +174,7 @@ const ENG=(()=>{
    const text=layer==='full'?(L[12]||L[11]):L[11];if(!EX.rx.test(text))continue;if(gi>=0&&L[2]!==gi)continue;if(pos&&PN[L[7]]!==pos)continue;const dk=L[0]+'\u0001'+text;if(EX.seen.has(dk))continue;EX.seen.add(dk);EX.found++;   // same line in two transcriptions of one fragment: show once
   
    const mms=L[10];rows.push({shelfmark:L[0],library:L[1],genre_domain:META.genres[L[2]],genre:L[3],block_kind:L[4],line_no:L[5],n_lines:L[6],position:PN[L[7]],src:L[8],doc:L[9],mms_id:mms,text,raw:L[13],
-    link:/^\d+$/.test(mms)?`https://www.nli.org.il/he/manuscripts/NNL_ALEPH${mms}/NLI`:'',pgp_link:L[8]==='pgp'?`https://geniza.princeton.edu/en/documents/${L[9]}/`:''})}
+    link:/^\d+$/.test(mms)?`https://www.nli.org.il/he/manuscripts/NNL_ALEPH${mms}/NLI`:'',...pgpLink(L[8],L[9],L[0])})}
   return {rows,total:EX.ord.length,more:EX.i<EX.ord.length,approx:true}}
  return {meta,search,where,examples};
 })();
@@ -248,8 +252,8 @@ async function moreEx(){const {phrase,offset}=exState;if(!phrase)return;
   $('exs').insertAdjacentHTML('beforeend',j.rows.map(r=>`<div class="ex"><div class="exmeta"><b>${esc(r.shelfmark||'(no shelfmark)')}</b>${r.library?`<span>${esc(r.library)}</span>`:''}
    <span class="pill">${esc(r.genre_domain)}${r.genre&&r.genre!==r.genre_domain&&!/^\(/.test(r.genre)?' · '+esc(r.genre):''}</span>
    <span>${r.position==='unknown'?'line position unknown':`line ${r.line_no} of ${r.n_lines} (${r.position})`}${r.block_kind&&!['main'].includes(r.block_kind)?' · '+esc(r.block_kind):''}</span>
+   ${r.pgp_link?`<a href="${esc(r.pgp_link)}" target="_blank" rel="noopener" title="${r.src==='pgp'?'the Princeton Geniza Project document this line comes from':'this fragment in the Princeton Geniza Project'}">${esc(r.pgp_label)} ↗</a>`:''}
    ${r.link?`<a href="${esc(r.link)}" target="_blank" rel="noopener">NLI ↗</a>`:''}
-   ${r.pgp_link?`<a href="${esc(r.pgp_link)}" target="_blank" rel="noopener" title="the Princeton Geniza Project document this line comes from">Princeton doc ${esc(r.doc)} ↗</a>`:''}
    <button class="rawbtn">transcription as written</button></div>
    <div class="heb" style="margin-top:4px">${highlight(r.text,phrase)}</div><div class="raw heb">${esc(snippet(r.raw,phrase.split(" ")[0]))}</div></div>`).join(''));
   $('exs').querySelectorAll('.rawbtn').forEach(b=>b.onclick=()=>b.closest('.ex').classList.toggle('showraw'));

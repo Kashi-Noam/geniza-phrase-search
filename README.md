@@ -46,7 +46,7 @@ The full technical explanation is in [docs/TECHNICAL.md](docs/TECHNICAL.md): the
 | Folder | What it is |
 |---|---|
 | `index.html`, `data/` | The online site (GitHub Pages) |
-| `pipeline/` | The scripts that build the data on the Haifa server: `extract_fgp.py` → `corpus.py` → `phrases.py` → `export_static.py` |
+| `pipeline/` | The scripts that build the data on the Haifa server: `extract_fgp.py` → `corpus.py` → `phrases.py` → `export_static.py`, plus `pgp_links.py` for the Princeton links |
 | `local-app/` | A version that runs on your own computer: a Python server over the DuckDB database, with exact counts |
 | `docs/` | Technical documentation |
 

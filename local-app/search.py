@@ -10,7 +10,7 @@ Pattern syntax (one or more words, separated by spaces):
 
   python search.py "כאן נ?ן" [--partial] [--mode start|contains] [--genre Documents] [--position start] [--layer strict|full] [--alike] [--n 3-5] [--examples]
 """
-import duckdb, re, sys, os, argparse
+import duckdb, re, sys, os, argparse, json, urllib.parse
 DB = os.environ.get('PHRASES_DB') or next((p for p in [os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'phrases.duckdb'),
       '/nas/archive/haifa-data/noam/fgp_report/phrases.duckdb'] if os.path.exists(p)), 'phrases.duckdb')
 HEB = 'א-ת'
@@ -60,6 +60,20 @@ def search(pattern, mode='start', genre=None, position=None, layer='strict', ali
                 ORDER BY p.frags DESC, p.n DESC LIMIT {int(limit)}"""
     return con.execute(q, args).fetchdf()
 
+_PGPL = None
+def pgp_link(src, doc, shelfmark):
+    """(url, label) on the Princeton Geniza Project site: a PGP line -> its document; other lines -> the PGP document(s) of the shelfmark (pgp_links.json next to the database)"""
+    global _PGPL
+    P = 'https://geniza.princeton.edu/en/documents/'
+    if src == 'pgp': return f'{P}{doc}/', f'Princeton doc {doc}'
+    if _PGPL is None:
+        f = os.path.join(os.path.dirname(DB), 'pgp_links.json')
+        _PGPL = json.load(open(f, encoding='utf-8')) if os.path.exists(f) else {}
+    m = _PGPL.get(shelfmark)
+    if not m: return '', ''
+    ids = m[1].split(',')
+    return (f'{P}{ids[0]}/', f'Princeton doc {ids[0]}') if len(ids) == 1 else (f'{P}?q=' + urllib.parse.quote(f'shelfmark:"{m[0]}"'), f'Princeton ({len(ids)} docs)')
+
 def examples(phrase_or_pattern, genre=None, position=None, layer='strict', alike=False, k=10, offset=0, con=None, db=None):
     """real lines that contain it, with shelfmark, line number and a link to the NLI record"""
     con = con or _con(db)
@@ -78,7 +92,8 @@ def examples(phrase_or_pattern, genre=None, position=None, layer='strict', alike
     df = con.execute(q, args).fetchdf()
     df['total'] = con.execute(f"SELECT count(DISTINCT (shelfmark, {col})) FROM lines WHERE {' AND '.join(where)}", args).fetchone()[0]
     df['link'] = [f'https://www.nli.org.il/he/manuscripts/NNL_ALEPH{m}/NLI' if isinstance(m, str) and m.isdigit() else '' for m in df.mms_id]
-    df['pgp_link'] = [f'https://geniza.princeton.edu/en/documents/{d}/' if s == 'pgp' else '' for d, s in zip(df.doc, df.src)]   # one shelfmark can hold several PGP documents
+    pl = [pgp_link(s, d, m) for s, d, m in zip(df.src, df.doc, df.shelfmark)]   # one shelfmark can hold several PGP documents
+    df['pgp_link'] = [x[0] for x in pl]; df['pgp_label'] = [x[1] for x in pl]
     return df
 
 def where_it_appears(phrase, layer='strict', con=None, db=None):
@@ -99,4 +114,4 @@ if __name__ == '__main__':
     if a.examples and len(r):
         e = examples(r.phrase.iloc[0], a.genre, a.position, a.layer, con=con, k=5)
         print('\nexamples of:', r.phrase.iloc[0])
-        for x in e.itertuples(): print(f'  {x.shelfmark} (line {x.line_no}/{x.n_lines}, {x.position}, {x.genre_domain}): {x.text[:140]}  {x.link} {x.pgp_link}')
+        for x in e.itertuples(): print(f'  {x.shelfmark} (line {x.line_no}/{x.n_lines}, {x.position}, {x.genre_domain}): {x.text[:140]}  {x.pgp_link} {x.link}')

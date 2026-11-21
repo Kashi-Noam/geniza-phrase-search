@@ -151,6 +151,7 @@ The online version can't run a database, so the database is turned into small gz
 | `data/p/NNNN.tsv.gz` | 642 files, 47 MB | phrases, partitioned by their leading characters |
 | `data/w/NNNN.tsv.gz` | 1,024 files, 21 MB | word index: each word → the ids of the lines that contain it |
 | `data/l/NNNN.json.gz` | 698 files, 59 MB | the lines, 1,000 per file, in id order |
+| `data/pgp_links.json` | 300 KB | shelfmark → Princeton Geniza Project shelfmark and document ids (`pipeline/pgp_links.py`), for the Princeton link on each line |
 
 No file is larger than about 850 KB. The total is 129 MB.
 
@@ -278,6 +279,12 @@ venv/bin/python phrases.py
 venv/bin/python export_static.py               # -> phrase_site/data/
 ```
 
+Then rebuild the Princeton links (needs `data/fragments.csv` from https://github.com/princetongenizalab/pgp-metadata):
+
+```bash
+venv/bin/python pgp_links.py pgp-metadata/data/fragments.csv phrases.duckdb phrase_site/data/pgp_links.json
+```
+
 Then replace `data/` in this repository with `phrase_site/data/` and push. GitHub Pages republishes within a minute or two.
 
 The genre and the fragment links come from the dashboard table (`geniza_fragments_status.parquet`). Rebuild the dashboard first if its genre mapping changed.
@@ -322,3 +329,14 @@ python search.py "שהדות? ד?ות באנפ?א" --genre Documents --examples
 - **The online example count** is "lines containing all the words", an upper bound. The shown lines are checked for the exact phrase.
 - **The genre** is the unified genre of the fragment record, not of the specific text block. For example, a letter written on the back of a literary text gets the record's genre.
 - **Phrases found in fewer than 3 fragments are not stored.** Unique wordings won't appear.
+
+## Links on each example line
+
+Each line has up to two links, Princeton first:
+
+- **Princeton**: a line transcribed by the PGP links to its own PGP document (`documents/<id>/`). One shelfmark can hold several PGP documents, for example recto and verso, so the shelfmark alone is not enough. Any other line is looked up by shelfmark in `data/pgp_links.json`. If the fragment has one PGP document, the line links to it. If it has several, the line links to a PGP search for that shelfmark (`shelfmark:"…"`).
+  - FIST and PGP write shelfmarks differently (`T-S 13 J 3.27` / `T-S 13J3.27`, `heb. f. 101.30` / `Bodl. MS heb. f 101/30`). `pgp_links.py` compares them after removing spaces, library prefixes and dots, but keeps a dot between digits, so `1.15` and `11/5` stay apart.
+  - Checked against the 6,663 PGP documents whose shelfmark matched: 99.1% get the same document id. The rest are multi-fragment documents in the PGP catalogue, and those lines use their own document link anyway.
+  - 7,535 of 25,394 shelfmarks are found in the PGP. Most Friedberg fragments are literary and are not catalogued there.
+- **NLI**: the National Library of Israel record, when the fragment has an MMS id.
+
