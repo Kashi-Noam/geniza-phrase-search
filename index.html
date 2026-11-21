@@ -169,7 +169,7 @@ const ENG=(()=>{
   while(EX.i<EX.ord.length&&rows.length<k&&fetched<40){const id=EX.ord[EX.i++];const c=Math.floor(id/META.chunk);if(!LC.has(c))fetched++;const L=(await chunk(c))[id%META.chunk];
    const text=layer==='full'?(L[12]||L[11]):L[11];if(!EX.rx.test(text))continue;if(gi>=0&&L[2]!==gi)continue;if(pos&&PN[L[7]]!==pos)continue;EX.found++;
    const mms=L[10];rows.push({shelfmark:L[0],library:L[1],genre_domain:META.genres[L[2]],genre:L[3],block_kind:L[4],line_no:L[5],n_lines:L[6],position:PN[L[7]],src:L[8],doc:L[9],mms_id:mms,text,raw:L[13],
-    link:/^\d+$/.test(mms)?`https://www.nli.org.il/he/manuscripts/NNL_ALEPH${mms}/NLI`:(L[8]==='pgp'?`https://geniza.princeton.edu/en/documents/${L[9]}/`:'')})}
+    link:/^\d+$/.test(mms)?`https://www.nli.org.il/he/manuscripts/NNL_ALEPH${mms}/NLI`:'',pgp_link:L[8]==='pgp'?`https://geniza.princeton.edu/en/documents/${L[9]}/`:''})}
   return {rows,total:EX.ord.length,more:EX.i<EX.ord.length,approx:true}}
  return {meta,search,where,examples};
 })();
@@ -247,7 +247,8 @@ async function moreEx(){const {phrase,offset}=exState;if(!phrase)return;
   $('exs').insertAdjacentHTML('beforeend',j.rows.map(r=>`<div class="ex"><div class="exmeta"><b>${esc(r.shelfmark||'(no shelfmark)')}</b>${r.library?`<span>${esc(r.library)}</span>`:''}
    <span class="pill">${esc(r.genre_domain)}${r.genre&&r.genre!==r.genre_domain&&!/^\(/.test(r.genre)?' · '+esc(r.genre):''}</span>
    <span>${r.position==='unknown'?'line position unknown':`line ${r.line_no} of ${r.n_lines} (${r.position})`}${r.block_kind&&!['main'].includes(r.block_kind)?' · '+esc(r.block_kind):''}</span>
-   ${r.link?`<a href="${esc(r.link)}" target="_blank" rel="noopener">${r.src==='pgp'&&!/nli/.test(r.link)?'Princeton':'NLI'} ↗</a>`:''}
+   ${r.link?`<a href="${esc(r.link)}" target="_blank" rel="noopener">NLI ↗</a>`:''}
+   ${r.pgp_link?`<a href="${esc(r.pgp_link)}" target="_blank" rel="noopener" title="the Princeton Geniza Project document this line comes from">Princeton doc ${esc(r.doc)} ↗</a>`:''}
    <button class="rawbtn">transcription as written</button></div>
    <div class="heb" style="margin-top:4px">${highlight(r.text,phrase)}</div><div class="raw heb">${esc(snippet(r.raw,phrase.split(" ")[0]))}</div></div>`).join(''));
   $('exs').querySelectorAll('.rawbtn').forEach(b=>b.onclick=()=>b.closest('.ex').classList.toggle('showraw'));

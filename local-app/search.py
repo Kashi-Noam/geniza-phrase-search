@@ -75,8 +75,8 @@ def examples(phrase_or_pattern, genre=None, position=None, layer='strict', alike
             FROM lines WHERE {' AND '.join(where)} ORDER BY hash(id) LIMIT {int(k)} OFFSET {int(offset)}"""
     df = con.execute(q, args).fetchdf()
     df['total'] = con.execute(f"SELECT count(*) FROM lines WHERE {' AND '.join(where)}", args).fetchone()[0]
-    df['link'] = [f'https://www.nli.org.il/he/manuscripts/NNL_ALEPH{m}/NLI' if isinstance(m, str) and m.isdigit()
-                  else (f'https://geniza.princeton.edu/en/documents/{d}/' if s == 'pgp' else '') for m, d, s in zip(df.mms_id, df.doc, df.src)]
+    df['link'] = [f'https://www.nli.org.il/he/manuscripts/NNL_ALEPH{m}/NLI' if isinstance(m, str) and m.isdigit() else '' for m in df.mms_id]
+    df['pgp_link'] = [f'https://geniza.princeton.edu/en/documents/{d}/' if s == 'pgp' else '' for d, s in zip(df.doc, df.src)]   # one shelfmark can hold several PGP documents
     return df
 
 def where_it_appears(phrase, layer='strict', con=None, db=None):
@@ -97,4 +97,4 @@ if __name__ == '__main__':
     if a.examples and len(r):
         e = examples(r.phrase.iloc[0], a.genre, a.position, a.layer, con=con, k=5)
         print('\nexamples of:', r.phrase.iloc[0])
-        for x in e.itertuples(): print(f'  {x.shelfmark} (line {x.line_no}/{x.n_lines}, {x.position}, {x.genre_domain}): {x.text[:140]}  {x.link}')
+        for x in e.itertuples(): print(f'  {x.shelfmark} (line {x.line_no}/{x.n_lines}, {x.position}, {x.genre_domain}): {x.text[:140]}  {x.link} {x.pgp_link}')
