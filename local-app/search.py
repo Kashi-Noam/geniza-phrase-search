@@ -72,9 +72,11 @@ def examples(phrase_or_pattern, genre=None, position=None, layer='strict', alike
             val = [val] if isinstance(val, str) else list(val)
             where.append(f"{c} IN ({','.join('?' * len(val))})"); args += val
     q = f"""SELECT shelfmark, library, genre_domain, genre, block_kind, line_no, n_lines, position, raw, {col} AS text, src, doc, mms_id
-            FROM lines WHERE {' AND '.join(where)} ORDER BY hash(id) LIMIT {int(k)} OFFSET {int(offset)}"""
+            FROM lines WHERE {' AND '.join(where)}
+            QUALIFY row_number() OVER (PARTITION BY shelfmark, {col} ORDER BY hash(id)) = 1   -- same line in two transcriptions of one fragment: show once
+            ORDER BY hash(id) LIMIT {int(k)} OFFSET {int(offset)}"""
     df = con.execute(q, args).fetchdf()
-    df['total'] = con.execute(f"SELECT count(*) FROM lines WHERE {' AND '.join(where)}", args).fetchone()[0]
+    df['total'] = con.execute(f"SELECT count(DISTINCT (shelfmark, {col})) FROM lines WHERE {' AND '.join(where)}", args).fetchone()[0]
     df['link'] = [f'https://www.nli.org.il/he/manuscripts/NNL_ALEPH{m}/NLI' if isinstance(m, str) and m.isdigit() else '' for m in df.mms_id]
     df['pgp_link'] = [f'https://geniza.princeton.edu/en/documents/{d}/' if s == 'pgp' else '' for d, s in zip(df.doc, df.src)]   # one shelfmark can hold several PGP documents
     return df

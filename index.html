@@ -164,10 +164,11 @@ const ENG=(()=>{
   if(!EX||EX.key!==key||+q.offset===0){const ws=[...new Set(ph.split(' '))];const lists=await Promise.all(ws.map(postings));lists.sort((a,b)=>a.length-b.length);
    let c=lists[0]||new Int32Array(0);for(const l of lists.slice(1))c=inter(c,l);
    const ord=Array.from(c).sort((a,b)=>((Math.imul(a,2654435761)>>>0)-(Math.imul(b,2654435761)>>>0)));
-   EX={key,ord,i:0,rx:new RegExp('(^| |‖)'+reEsc(ph).replace(/ /g,' ')+'( |‖|$)'),found:0}}
+   EX={key,ord,i:0,rx:new RegExp('(^| |‖)'+reEsc(ph).replace(/ /g,' ')+'( |‖|$)'),found:0,seen:new Set()}}
   const rows=[];let fetched=0;
   while(EX.i<EX.ord.length&&rows.length<k&&fetched<40){const id=EX.ord[EX.i++];const c=Math.floor(id/META.chunk);if(!LC.has(c))fetched++;const L=(await chunk(c))[id%META.chunk];
-   const text=layer==='full'?(L[12]||L[11]):L[11];if(!EX.rx.test(text))continue;if(gi>=0&&L[2]!==gi)continue;if(pos&&PN[L[7]]!==pos)continue;EX.found++;
+   const text=layer==='full'?(L[12]||L[11]):L[11];if(!EX.rx.test(text))continue;if(gi>=0&&L[2]!==gi)continue;if(pos&&PN[L[7]]!==pos)continue;const dk=L[0]+'\u0001'+text;if(EX.seen.has(dk))continue;EX.seen.add(dk);EX.found++;   // same line in two transcriptions of one fragment: show once
+  
    const mms=L[10];rows.push({shelfmark:L[0],library:L[1],genre_domain:META.genres[L[2]],genre:L[3],block_kind:L[4],line_no:L[5],n_lines:L[6],position:PN[L[7]],src:L[8],doc:L[9],mms_id:mms,text,raw:L[13],
     link:/^\d+$/.test(mms)?`https://www.nli.org.il/he/manuscripts/NNL_ALEPH${mms}/NLI`:'',pgp_link:L[8]==='pgp'?`https://geniza.princeton.edu/en/documents/${L[9]}/`:''})}
   return {rows,total:EX.ord.length,more:EX.i<EX.ord.length,approx:true}}
